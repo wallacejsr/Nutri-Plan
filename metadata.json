@@ -1,0 +1,5 @@
+{
+  "name": "NutriPlan Dashboard",
+  "description": "Professional nutritional planning dashboard with real-time calculations, dynamic diet building, and PDF report generation.",
+  "requestFramePermissions": []
+}
