@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>EPI Purchase Spreadsheet</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.16.9/xlsx.full.min.js"></script>
+</head>
+<body>
+    <h1>EPI Purchase Spreadsheet</h1>
+    <table id="spreadsheet">
+        <tr>
+            <th>CODIGO-PRODUTO</th>
+            <th>DESCRIÇÃO</th>
+            <th>UNIDADE</th>
+            <th>NCM</th>
+            <th>QUANTIDADE</th>
+            <th>VALOR-UNITARIO</th>
+            <th>VALOR TOTAL</th>
+        </tr>
+        <tr><td>EPI001</td><td>Luvas de Látex</td><td>UN</td><td>12345678</td><td>100</td><td>2,50</td><td>250,00</td></tr>
+        <tr><td>EPI002</td><td>Máscara Descartável</td><td>UN</td><td>23456789</td><td>200</td><td>1,00</td><td>200,00</td></tr>
+        <tr><td>EPI003</td><td>Protetor Auricular</td><td>UN</td><td>34567890</td><td>150</td><td>0,80</td><td>120,00</td></tr>
+        <tr><td>EPI004</td><td>Óculos de Proteção</td><td>UN</td><td>45678901</td><td>75</td><td>10,00</td><td>750,00</td></tr>
+        <tr><td>EPI005</td><td>Casqueira</td><td>UN</td><td>56789012</td><td>50</td><td>30,00</td><td>1500,00</td></tr>
+        <tr><td>EPI006</td><td>Botas de Segurança</td><td>PAR</td><td>67890123</td><td>25</td><td>100,00</td><td>2500,00</td></tr>
+        <tr><td>EPI007</td><td>Cinto de Segurança</td><td>UN</td><td>78901234</td><td>40</td><td>50,00</td><td>2000,00</td></tr>
+        <tr><td>EPI008</td><td>Proteção Facial</td><td>UN</td><td>89012345</td><td>30</td><td>15,00</td><td>450,00</td></tr>
+        <tr><td>EPI009</td><td>Macacão de Proteção</td><td>UN</td><td>90123456</td><td>20</td><td>60,00</td><td>1200,00</td></tr>
+        <tr><td>EPI010</td><td>Respirador</td><td>UN</td><td>01234567</td><td>15</td><td>75,00</td><td>1125,00</td></tr>
+        <tr><td>EPI011</td><td>Capacete</td><td>UN</td><td>12345678</td><td>10</td><td>25,00</td><td>250,00</td></tr>
+        <tr><td>EPI012</td><td>Jaqueta de Segurança</td><td>UN</td><td>23456789</td><td>12</td><td>40,00</td><td>480,00</td></tr>
+        <tr><td>EPI013</td><td>Luvas de Proteção</td><td>PAR</td><td>34567890</td><td>20</td><td>20,00</td><td>400,00</td></tr>
+        <tr><td>EPI014</td><td>Botas de Borracha</td><td>PAR</td><td>45678901</td><td>18</td><td>45,00</td><td>810,00</td></tr>
+        <tr><td>EPI015</td><td>Coletes</td><td>UN</td><td>56789012</td><td>22</td><td>28,00</td><td>616,00</td></tr>
+        <tr><td>EPI016</td><td>Escadas de Segurança</td><td>UN</td><td>67890123</td><td>8</td><td>150,00</td><td>1200,00</td></tr>
+        <tr><td>EPI017</td><td>Lanterna de Segurança</td><td>UN</td><td>78901234</td><td>5</td><td>55,00</td><td>275,00</td></tr>
+    </table>
+    <script>
+        // Auto-fit columns and freeze header
+        document.addEventListener('DOMContentLoaded', function () {
+            var header = document.getElementById('spreadsheet').querySelector('tr');
+            var content = document.getElementsByTagName('table')[0];
+            for (var i = 0; i < header.cells.length; i++) {
+                header.cells[i].style.width = 'auto';
+            }
+            // Freezing the header
+            window.onload = function () {
+                var freezeHeader = function() {
+                    var top = content.rows[0];
+                    top.setAttribute('style', 'position:sticky; top:0; background:white; z-index:10;');
+                };
+                setTimeout(freezeHeader, 0);
+            };
+        });
+    </script>
+</body>
+</html>
