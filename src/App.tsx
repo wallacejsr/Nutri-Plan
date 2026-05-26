@@ -14,7 +14,8 @@ import {
   Search,
   LogIn,
   LogOut,
-  AlertTriangle
+  AlertTriangle,
+  RotateCcw
 } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import jsPDF from 'jspdf';
@@ -32,6 +33,17 @@ import {
   Sex,
   ActivityLevel
 } from './types';
+
+type MacroTargets = Pick<CalculatedMacros, 'protein' | 'fat' | 'carbs'>;
+
+const getMacroCalories = (targets: MacroTargets) => (
+  targets.protein * 4 + targets.fat * 9 + targets.carbs * 4
+);
+
+const getMacroPercent = (grams: number, kcalPerGram: number, targetCalories?: number) => {
+  if (!targetCalories) return 0;
+  return Math.round(((grams * kcalPerGram) / targetCalories) * 100);
+};
 
 export default function App() {
   const [view, setView] = useState<'setup' | 'dashboard'>('setup');
@@ -51,7 +63,21 @@ export default function App() {
     { id: '2', name: 'Almoço', items: [] }
   ]);
 
-  const calculated = useMemo(() => calculateNutrition(profile), [profile]);
+  const [macroTargets, setMacroTargets] = useState<MacroTargets | null>(null);
+
+  const baseCalculated = useMemo(() => calculateNutrition(profile), [profile]);
+  const calculated = useMemo(() => {
+    if (!baseCalculated) return null;
+    if (!macroTargets) return baseCalculated;
+
+    return {
+      ...baseCalculated,
+      targetCalories: Math.round(getMacroCalories(macroTargets)),
+      protein: Math.round(macroTargets.protein),
+      fat: Math.round(macroTargets.fat),
+      carbs: Math.round(macroTargets.carbs),
+    };
+  }, [baseCalculated, macroTargets]);
 
   useEffect(() => {
     if (!supabase) {
@@ -101,6 +127,13 @@ export default function App() {
           height: data.height,
           activityLevel: data.activity_level as ActivityLevel
         });
+        if (data.calculated_macros?.protein && data.calculated_macros?.fat && data.calculated_macros?.carbs) {
+          setMacroTargets({
+            protein: data.calculated_macros.protein,
+            fat: data.calculated_macros.fat,
+            carbs: data.calculated_macros.carbs
+          });
+        }
         setMeals(data.meals);
         setView('dashboard');
       }
@@ -164,6 +197,18 @@ export default function App() {
       setView('dashboard');
       savePlan(meals);
     }
+  };
+
+  const handleMacroTargetChange = (macro: keyof MacroTargets, value: number) => {
+    const fallback = calculated || baseCalculated;
+    if (!fallback) return;
+
+    setMacroTargets(prev => ({
+      protein: prev?.protein ?? fallback.protein,
+      fat: prev?.fat ?? fallback.fat,
+      carbs: prev?.carbs ?? fallback.carbs,
+      [macro]: Number.isFinite(value) && value >= 0 ? value : 0,
+    }));
   };
 
   const addMeal = () => {
@@ -520,18 +565,39 @@ export default function App() {
                   </div>
 
                   <div className="mt-8 pt-8 border-t border-white/5 space-y-3">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-slate-400">Proteínas (29%)</span>
-                      <span className="text-white font-bold">{calculated?.protein}g</span>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Macros alvo</span>
+                      {macroTargets && (
+                        <button
+                          onClick={() => setMacroTargets(null)}
+                          className="p-2 text-slate-500 hover:text-emerald-400 rounded-lg hover:bg-white/5 transition-all"
+                          title="Voltar para macros automáticos"
+                        >
+                          <RotateCcw className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-slate-400">Gorduras (37%)</span>
-                      <span className="text-white font-bold">{calculated?.fat}g</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-slate-400">Carboidratos (34%)</span>
-                      <span className="text-white font-bold">{calculated?.carbs}g</span>
-                    </div>
+                    {[
+                      { key: 'protein' as const, label: 'Proteínas', kcalPerGram: 4, value: calculated?.protein, color: 'focus:border-blue-400/60' },
+                      { key: 'fat' as const, label: 'Gorduras', kcalPerGram: 9, value: calculated?.fat, color: 'focus:border-amber-400/60' },
+                      { key: 'carbs' as const, label: 'Carboidratos', kcalPerGram: 4, value: calculated?.carbs, color: 'focus:border-purple-400/60' },
+                    ].map(macro => (
+                      <div key={macro.key} className="flex items-center justify-between gap-3 text-sm">
+                        <span className="text-slate-400">
+                          {macro.label} ({getMacroPercent(macro.value || 0, macro.kcalPerGram, calculated?.targetCalories)}%)
+                        </span>
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="number"
+                            min="0"
+                            value={macro.value ?? ''}
+                            onChange={e => handleMacroTargetChange(macro.key, Number(e.target.value))}
+                            className={cn("w-20 bg-[#0f1115] border border-white/10 rounded-lg px-2 py-1 text-right text-white font-bold outline-none transition-colors", macro.color)}
+                          />
+                          <span className="text-xs text-slate-500">g</span>
+                        </div>
+                      </div>
+                    ))}
                   </div>
 
                   <button 
