@@ -15,7 +15,11 @@ import {
   LogIn,
   LogOut,
   AlertTriangle,
-  RotateCcw
+  RotateCcw,
+  Mail,
+  X,
+  Loader2,
+  CheckCircle2
 } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import jsPDF from 'jspdf';
@@ -49,6 +53,11 @@ export default function App() {
   const [view, setView] = useState<'setup' | 'dashboard'>('setup');
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [loginModalOpen, setLoginModalOpen] = useState(false);
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginStatus, setLoginStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [loginMessage, setLoginMessage] = useState('');
+  const [loginSubmitting, setLoginSubmitting] = useState(false);
   const [profile, setProfile] = useState<UserProfile>({
     strategy: 'Maintenance',
     sex: 'Male',
@@ -89,6 +98,9 @@ export default function App() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
       if (session?.user) {
+        setLoginModalOpen(false);
+        setLoginStatus('idle');
+        setLoginMessage('');
         fetchPlan(session.user.id);
       } else {
         setLoading(false);
@@ -98,6 +110,9 @@ export default function App() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
       if (session?.user) {
+        setLoginModalOpen(false);
+        setLoginStatus('idle');
+        setLoginMessage('');
         fetchPlan(session.user.id);
       } else {
         setLoading(false);
@@ -174,11 +189,41 @@ export default function App() {
       alert('Supabase não está configurado. Verifique as variáveis de ambiente.');
       return;
     }
-    const email = prompt('Digite seu email para login (Magic Link):');
-    if (email) {
-      const { error } = await supabase.auth.signInWithOtp({ email });
-      if (error) alert(error.message);
-      else alert('Verifique seu email para o link de acesso!');
+    setLoginStatus('idle');
+    setLoginMessage('');
+    setLoginModalOpen(true);
+  };
+
+  const handleLoginSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!supabase || loginSubmitting) return;
+
+    const email = loginEmail.trim();
+    if (!email) {
+      setLoginStatus('error');
+      setLoginMessage('Informe um email para continuar.');
+      return;
+    }
+
+    setLoginSubmitting(true);
+    setLoginStatus('idle');
+    setLoginMessage('');
+
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: {
+        emailRedirectTo: window.location.origin
+      }
+    });
+
+    setLoginSubmitting(false);
+
+    if (error) {
+      setLoginStatus('error');
+      setLoginMessage(error.message);
+    } else {
+      setLoginStatus('success');
+      setLoginMessage('Enviamos um link de acesso para o seu email.');
     }
   };
 
@@ -413,6 +458,9 @@ export default function App() {
     );
   }
 
+  const userEmail = user?.email || '';
+  const userInitial = (userEmail.charAt(0) || 'U').toUpperCase();
+
   return (
     <div className="min-h-screen bg-[#0f1115] text-slate-200 font-sans selection:bg-emerald-500/30">
       {!supabase && (
@@ -423,11 +471,19 @@ export default function App() {
       )}
       <nav className="max-w-7xl mx-auto px-6 py-4 flex justify-end">
         {user ? (
-          <div className="flex items-center gap-4">
-            <span className="text-xs text-slate-500">{user.email}</span>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-[#1a1d23] px-3 py-2 shadow-lg shadow-black/10">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/10 text-sm font-black text-emerald-400">
+                {userInitial}
+              </div>
+              <div className="hidden sm:block leading-tight">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Conta</p>
+                <p className="max-w-[220px] truncate text-xs font-semibold text-slate-200">{userEmail}</p>
+              </div>
+            </div>
             <button 
               onClick={handleLogout}
-              className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-slate-400 hover:text-white transition-colors"
+              className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-xs font-bold uppercase tracking-widest text-slate-400 transition-colors hover:border-red-400/30 hover:bg-red-500/10 hover:text-red-300"
             >
               <LogOut className="w-4 h-4" />
               Sair
@@ -443,6 +499,90 @@ export default function App() {
           </button>
         )}
       </nav>
+      <AnimatePresence>
+        {loginModalOpen && (
+          <motion.div
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 px-6 backdrop-blur-sm"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="login-title"
+              className="w-full max-w-md rounded-3xl border border-white/10 bg-[#1a1d23] p-6 shadow-2xl shadow-black/50"
+              initial={{ opacity: 0, scale: 0.96, y: 16 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 16 }}
+            >
+              <div className="mb-6 flex items-start justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-400">
+                    <LogIn className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h2 id="login-title" className="text-xl font-black text-white">Entrar / Cadastrar</h2>
+                    <p className="text-sm text-slate-400">Acesse sua conta por email.</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setLoginModalOpen(false)}
+                  className="rounded-xl p-2 text-slate-500 transition-colors hover:bg-white/5 hover:text-white"
+                  title="Fechar"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <form onSubmit={handleLoginSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold uppercase tracking-wider text-slate-500 ml-1">Email</label>
+                  <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-[#0f1115] px-4 py-3 transition-colors focus-within:border-emerald-500/60">
+                    <Mail className="h-5 w-5 text-slate-500" />
+                    <input
+                      type="email"
+                      value={loginEmail}
+                      onChange={e => {
+                        setLoginEmail(e.target.value);
+                        if (loginStatus !== 'idle') {
+                          setLoginStatus('idle');
+                          setLoginMessage('');
+                        }
+                      }}
+                      placeholder="seu@email.com"
+                      className="w-full bg-transparent text-sm text-white outline-none placeholder:text-slate-600"
+                      autoComplete="email"
+                      autoFocus
+                    />
+                  </div>
+                </div>
+
+                {loginMessage && (
+                  <div className={cn(
+                    "flex items-start gap-3 rounded-2xl border px-4 py-3 text-sm",
+                    loginStatus === 'success'
+                      ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-300"
+                      : "border-red-500/20 bg-red-500/10 text-red-300"
+                  )}>
+                    {loginStatus === 'success' ? <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" /> : <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />}
+                    <span>{loginMessage}</span>
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={loginSubmitting}
+                  className="flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-500 py-4 font-bold text-white shadow-lg shadow-emerald-500/20 transition-all hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  {loginSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : <Mail className="h-5 w-5" />}
+                  Enviar link de acesso
+                </button>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
       <AnimatePresence mode="wait">
         {view === 'setup' ? (
           <motion.div 
